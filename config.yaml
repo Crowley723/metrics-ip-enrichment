@@ -1,0 +1,18 @@
+mimir:
+  query_url: http://mimir-nginx.mimir.svc.cluster.local/prometheus
+  push_url:  http://mimir-nginx.mimir.svc.cluster.local/api/v1/push
+  org_id:    anonymous
+  username: test-user
+  password: insecure_secret
+
+mmdb:
+  city: /mmdb/GeoLite2-City.mmdb
+  asn:  /mmdb/GeoLite2-ASN.mmdb
+
+jobs:
+  - name: traefik_by_client_ip
+    source_query: traefik:requests:by_client_ip
+    output_metric: traefik:requests:by_client_ip:enriched
+    ip_label: client_ip
+    interval: 60s
+    enrichers: [geoip_city, geoip_asn]
