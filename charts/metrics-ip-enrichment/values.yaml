@@ -1,0 +1,48 @@
+namespace: default
+
+image:
+  repository: ghcr.io/crowley723/metrics-enrichment
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+config:
+  mimir:
+    queryUrl: http://mimir-nginx.mimir.svc.cluster.local/prometheus
+    pushUrl: http://mimir-nginx.mimir.svc.cluster.local/api/v1/push
+    orgId: anonymous
+  mmdb:
+    city: /mmdb/GeoLite2-City.mmdb
+    asn: /mmdb/GeoLite2-ASN.mmdb
+  jobs:
+    - name: traefik_by_client_ip
+      source_query: traefik:requests:by_client_ip
+      output_metric: traefik:requests:by_client_ip:enriched
+      ip_label: client_ip
+      interval: 60s
+      enrichers:
+        - geoip_city
+        - geoip_asn
+
+mmdb:
+  pvc:
+    storageClass: ""
+    size: 300Mi
+    accessMode: ReadWriteOnce
+
+  # Secret must contain a 'license-key' key with the MaxMind license key
+  licenseKeySecret: alloy-enrichment
+
+  updater:
+    schedule: "0 3 * * 1"
+    image:
+      curl: curlimages/curl:latest
+      busybox: busybox:latest
+
+resources: {}
+
+podSecurityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000

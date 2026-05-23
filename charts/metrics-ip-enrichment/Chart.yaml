@@ -1,0 +1,6 @@
+apiVersion: v2
+name: metrics-ip-enrichment
+description: Enriches Prometheus IP metrics with MaxMind GeoLite2 geo and ASN data.
+type: application
+version: 0.1.0
+appVersion: "latest"

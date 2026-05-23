@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "metrics-ip-enrichment.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "metrics-ip-enrichment.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    mimir:
+      query_url: {{ .Values.config.mimir.queryUrl | quote }}
+      push_url: {{ .Values.config.mimir.pushUrl | quote }}
+      org_id: {{ .Values.config.mimir.orgId | quote }}
+    mmdb:
+      city: {{ .Values.config.mmdb.city | quote }}
+      asn: {{ .Values.config.mmdb.asn | quote }}
+    jobs:
+    {{- range .Values.config.jobs }}
+      - name: {{ .name | quote }}
+        source_query: {{ .source_query | quote }}
+        output_metric: {{ .output_metric | quote }}
+        ip_label: {{ .ip_label | quote }}
+        interval: {{ .interval | quote }}
+        enrichers: {{ .enrichers | toJson }}
+    {{- end }}

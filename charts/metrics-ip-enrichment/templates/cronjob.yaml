@@ -1,0 +1,60 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "metrics-ip-enrichment.fullname" . }}-mmdb-updater
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "metrics-ip-enrichment.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.mmdb.updater.schedule | quote }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          securityContext:
+            runAsUser: {{ .Values.podSecurityContext.runAsUser }}
+            runAsGroup: {{ .Values.podSecurityContext.runAsGroup }}
+            fsGroup: {{ .Values.podSecurityContext.fsGroup }}
+          initContainers:
+            - name: fix-permissions
+              image: {{ .Values.mmdb.updater.image.busybox }}
+              command: ["sh", "-c", "chown -R {{ .Values.podSecurityContext.runAsUser }}:{{ .Values.podSecurityContext.runAsGroup }} /mmdb"]
+              securityContext:
+                runAsUser: 0
+              volumeMounts:
+                - name: mmdb
+                  mountPath: /mmdb
+          containers:
+            - name: updater
+              image: {{ .Values.mmdb.updater.image.curl }}
+              env:
+                - name: LICENSE_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.mmdb.licenseKeySecret }}
+                      key: license-key
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  BASE="https://download.maxmind.com/app/geoip_download?license_key=${LICENSE_KEY}&suffix=tar.gz"
+
+                  for DB in GeoLite2-City GeoLite2-ASN; do
+                    curl -fsSL "${BASE}&edition_id=${DB}" -o /tmp/${DB}.tar.gz
+                    tar -xzf /tmp/${DB}.tar.gz -C /tmp
+                    find /tmp -name "${DB}.mmdb" -exec cp {} /mmdb/${DB}.mmdb \;
+                    find /tmp -name "${DB}.mmdb" -exec rm {} \;
+                    rm -f /tmp/${DB}.tar.gz
+                  done
+
+                  echo "Done. Files:"
+                  ls -lh /mmdb/
+              volumeMounts:
+                - name: mmdb
+                  mountPath: /mmdb
+          restartPolicy: OnFailure
+          volumes:
+            - name: mmdb
+              persistentVolumeClaim:
+                claimName: {{ include "metrics-ip-enrichment.fullname" . }}-mmdb

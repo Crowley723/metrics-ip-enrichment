@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "metrics-ip-enrichment.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "metrics-ip-enrichment.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "metrics-ip-enrichment.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "metrics-ip-enrichment.selectorLabels" . | nindent 8 }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - -c
+            - /etc/metrics-ip-enrichment/config.yaml
+          ports:
+            - name: health
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+          volumeMounts:
+            - name: config
+              mountPath: /etc/metrics-ip-enrichment
+              readOnly: true
+            - name: mmdb
+              mountPath: /mmdb
+              readOnly: true
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "metrics-ip-enrichment.fullname" . }}
+        - name: mmdb
+          persistentVolumeClaim:
+            claimName: {{ include "metrics-ip-enrichment.fullname" . }}-mmdb
