@@ -1,5 +1,5 @@
 {{- define "metrics-ip-enrichment.fullname" -}}
-{{- .Release.Name | trunc 63 | trimSuffix "-" }}
+metrics-ip-enrichment
 {{- end }}
 
 {{- define "metrics-ip-enrichment.labels" -}}

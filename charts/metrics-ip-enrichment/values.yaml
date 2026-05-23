@@ -1,7 +1,7 @@
 namespace: default
 
 image:
-  repository: ghcr.io/crowley723/metrics-enrichment
+  repository: ghcr.io/crowley723/metrics-ip-enrichment
   tag: latest
   pullPolicy: IfNotPresent
 
