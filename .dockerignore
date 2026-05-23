@@ -1,0 +1,6 @@
+*.mmdb
+config.yaml
+.git
+.gitignore
+.idea
+.claude
