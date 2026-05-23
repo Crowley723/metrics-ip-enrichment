@@ -54,5 +54,6 @@ jobs:
       - name: Package and push Helm chart
         if: github.event_name != 'pull_request'
         run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
           helm package charts/metrics-ip-enrichment
           helm push metrics-ip-enrichment-*.tgz oci://ghcr.io/$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')/helm
