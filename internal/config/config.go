@@ -10,6 +10,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const defaultLicenseKeyEnv = "MAXMIND_LICENSE_KEY"
+const defaultRefreshInterval = 7 * 24 * time.Hour
+
 type Config struct {
 	Mimir MimirConfig `yaml:"mimir"`
 	MMDB  MMDBConfig  `yaml:"mmdb"`
@@ -25,8 +28,10 @@ type MimirConfig struct {
 }
 
 type MMDBConfig struct {
-	City string `yaml:"city"`
-	ASN  string `yaml:"asn"`
+	City            string        `yaml:"city"`
+	ASN             string        `yaml:"asn"`
+	LicenseKeyEnv   string        `yaml:"license_key_env"`
+	RefreshInterval time.Duration `yaml:"refresh_interval"`
 }
 
 type JobConfig struct {
@@ -49,6 +54,12 @@ func Load(path string) (*Config, error) {
 	if err := yaml.NewDecoder(f).Decode(&cfg); err != nil {
 		return nil, fmt.Errorf("decode config: %w", err)
 	}
+	if cfg.MMDB.LicenseKeyEnv == "" {
+		cfg.MMDB.LicenseKeyEnv = defaultLicenseKeyEnv
+	}
+	if cfg.MMDB.RefreshInterval <= 0 {
+		cfg.MMDB.RefreshInterval = defaultRefreshInterval
+	}
 	return &cfg, nil
 }
 
@@ -67,11 +78,14 @@ func Validate(cfg *Config, registry map[string]bool) error {
 		errs = append(errs, errors.New("mimir.org_id is required"))
 	}
 
-	if err := validateFile("mmdb.city", cfg.MMDB.City); err != nil {
-		errs = append(errs, err)
+	if cfg.MMDB.City == "" {
+		errs = append(errs, errors.New("mmdb.city is required"))
 	}
-	if err := validateFile("mmdb.asn", cfg.MMDB.ASN); err != nil {
-		errs = append(errs, err)
+	if cfg.MMDB.ASN == "" {
+		errs = append(errs, errors.New("mmdb.asn is required"))
+	}
+	if os.Getenv(cfg.MMDB.LicenseKeyEnv) == "" {
+		errs = append(errs, fmt.Errorf("env var %s is required for MMDB downloads", cfg.MMDB.LicenseKeyEnv))
 	}
 
 	if len(cfg.Jobs) == 0 {
@@ -121,14 +135,3 @@ func validateURL(field, raw string) error {
 	return nil
 }
 
-func validateFile(field, path string) error {
-	if path == "" {
-		return fmt.Errorf("%s is required", field)
-	}
-	f, err := os.Open(path)
-	if err != nil {
-		return fmt.Errorf("%s: cannot open %q: %w", field, path, err)
-	}
-	f.Close()
-	return nil
-}

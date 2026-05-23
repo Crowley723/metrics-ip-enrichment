@@ -15,6 +15,7 @@ import (
 	"github.com/Crowley723/metrics-ip-enrichment/internal/health"
 	"github.com/Crowley723/metrics-ip-enrichment/internal/job"
 	"github.com/Crowley723/metrics-ip-enrichment/internal/mimir"
+	"github.com/Crowley723/metrics-ip-enrichment/internal/mmdb"
 )
 
 func main() {
@@ -49,7 +50,19 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	licenseKey := os.Getenv(cfg.MMDB.LicenseKeyEnv)
+	dl := mmdb.New(licenseKey, cfg.MMDB.City, cfg.MMDB.ASN)
+	slog.Info("ensuring mmdb files are current")
+	if err := dl.EnsureFresh(ctx, cfg.MMDB.RefreshInterval); err != nil {
+		slog.Error("failed to download mmdb files", "error", err)
+		os.Exit(1)
+	}
+
 	g, ctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		return dl.Run(ctx, cfg.MMDB.RefreshInterval)
+	})
 
 	g.Go(func() error {
 		return health.Serve(ctx)

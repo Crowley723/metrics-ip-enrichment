@@ -14,6 +14,12 @@ data:
     mmdb:
       city: {{ .Values.config.mmdb.city | quote }}
       asn: {{ .Values.config.mmdb.asn | quote }}
+      {{- if .Values.config.mmdb.refreshInterval }}
+      refresh_interval: {{ .Values.config.mmdb.refreshInterval | quote }}
+      {{- end }}
+      {{- if .Values.config.mmdb.licenseKeyEnv }}
+      license_key_env: {{ .Values.config.mmdb.licenseKeyEnv | quote }}
+      {{- end }}
     jobs:
     {{- range .Values.config.jobs }}
       - name: {{ .name | quote }}

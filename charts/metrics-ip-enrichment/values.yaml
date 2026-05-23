@@ -15,6 +15,8 @@ config:
   mmdb:
     city: /mmdb/GeoLite2-City.mmdb
     asn: /mmdb/GeoLite2-ASN.mmdb
+    # refreshInterval: 168h  # default: weekly
+    # licenseKeyEnv: MAXMIND_LICENSE_KEY  # default
   jobs:
     - name: traefik_by_client_ip
       source_query: traefik:requests:by_client_ip
@@ -33,12 +35,6 @@ mmdb:
 
   # Secret must contain a 'license-key' key with the MaxMind license key
   licenseKeySecret: alloy-enrichment
-
-  updater:
-    schedule: "0 3 * * 1"
-    image:
-      curl: curlimages/curl:latest
-      busybox: busybox:latest
 
 resources: {}
 

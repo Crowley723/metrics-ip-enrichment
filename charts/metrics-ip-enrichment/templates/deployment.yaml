@@ -21,6 +21,12 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: MAXMIND_LICENSE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mmdb.licenseKeySecret }}
+                  key: license-key
           args:
             - -c
             - /etc/metrics-ip-enrichment/config.yaml
