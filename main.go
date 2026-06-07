@@ -55,7 +55,15 @@ func main() {
 	slog.Info("ensuring mmdb files are current")
 	if err := dl.EnsureFresh(ctx, cfg.MMDB.RefreshInterval); err != nil {
 		slog.Error("failed to download mmdb files", "error", err)
-		os.Exit(1)
+		// Only fatal if files are absent — stale files are still usable and the
+		// background Run loop will retry on the next interval tick.
+		if _, statErr := os.Stat(cfg.MMDB.City); statErr != nil {
+			os.Exit(1)
+		}
+		if _, statErr := os.Stat(cfg.MMDB.ASN); statErr != nil {
+			os.Exit(1)
+		}
+		slog.Warn("proceeding with existing mmdb files; download will be retried", "retry_in", cfg.MMDB.RefreshInterval)
 	}
 
 	g, ctx := errgroup.WithContext(ctx)
